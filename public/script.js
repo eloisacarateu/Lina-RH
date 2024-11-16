@@ -31,63 +31,57 @@ document.getElementById('searchButton').addEventListener('click', async () => {
 async function searchData(query) {
     // Converte a consulta para minúsculas
     const queryLower = query.toLowerCase();
- 
+
     // Divide a consulta em palavras-chave
     const keywords = queryLower.split(' ');
- 
-    // Procura no array 'data' por uma correspondência com qualquer palavra-chave
-    const item = data.find(item =>
+
+    console.log(data);
+
+    // Procura no array 'data' por correspondências com qualquer palavra-chave
+    const matchingItems = data.filter(item =>
         keywords.some(keyword =>
             new RegExp(keyword, 'i').test(item.detail) || // Busca no detalhe
             new RegExp(keyword, 'i').test(item.category) // Busca na categoria
         )
     );
- 
-    if (item) {
-        // Chama a OpenAI API para gerar uma resposta natural
-        const response = await callOpenAIAPI(item.detail, query);
+
+    console.log('Palavras-chave:', keywords);
+    console.log('Itens encontrados:', matchingItems);
+
+    if (matchingItems.length > 0) {
+        // Combina os detalhes das correspondências em uma string
+        const combinedDetails = matchingItems
+            .map(item => `${item.category}: ${item.detail}`)
+            .join('\n\n');
+
+        // Chama a OpenAI API para gerar uma resposta natural para os detalhes combinados
+        const response = await callOpenAIAPI(combinedDetails, query);
         return response;
     } else {
         return { answer: 'Informação não encontrada.' };
     }
 }
+
 async function callOpenAIAPI(detail, query) {
-    const apiKey = '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'; // Substitua pela sua chave da API
- 
-    const prompt = `Aqui estão algumas informações internas:\n${data.map(item => `${item.category}: ${item.detail}`).join('\n')}\n\nPergunta do usuário: "${query}"\nBaseando-se na seguinte informação: "${detail}", responda de forma natural e amigável ao usuário.`;
- 
-    try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo', 
-                messages: [
-                    { role: 'system', content: 'Você é um assistente útil.' },
-                    { role: 'user', content: prompt }
-                ],
-                max_tokens: 100,
-                temperature: 0.5
-            })
-        });
- 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Request failed with status ${response.status}: ${errorText}`);
-        }
- 
-        const responseData = await response.json();
-        const cleanText = responseData.choices[0].message.content.trim();
- 
-        return { answer: cleanText };
-    } catch (error) {
-        console.error('Erro ao chamar a API OpenAI:', error);
-        return { answer: 'Ocorreu um erro ao processar a informação.' };
+   
+
+    const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ detail, query })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Request failed: ${errorText}`);
     }
+
+    const responseData = await response.json();
+    return { answer: responseData.answer };
 }
+
  
 // Função para exibir os resultados na página
 
