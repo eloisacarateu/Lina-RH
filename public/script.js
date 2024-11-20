@@ -63,9 +63,7 @@ async function searchData(query) {
 }
 
 async function callOpenAIAPI(detail, query) {
-   
-    console.log("API Key:", process.env.OPENAI_API_KEY);
-    const response = await fetch('/api/openai', {
+       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
