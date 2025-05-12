@@ -23,73 +23,46 @@ const data = [
 ];
 
 document.getElementById('searchButton').addEventListener('click', async () => {
-    const query = document.getElementById('searchInput').value;
-    const result = await searchData(query);
-    displayResults(result);
+  const query = document.getElementById('searchInput').value;
+  const result = await searchData(query);
+  displayResults(result);
 });
- 
+
 async function searchData(query) {
-    // Converte a consulta para minúsculas
-    const queryLower = query.toLowerCase();
+  const queryLower = query.toLowerCase();
+  const keywords = queryLower.split(' ');
+  const item = data.find(item =>
+    keywords.some(keyword =>
+      new RegExp(keyword, 'i').test(item.detail) || new RegExp(keyword, 'i').test(item.category)
+    )
+  );
 
-    // Divide a consulta em palavras-chave
-    const keywords = queryLower.split(' ');
-
-    console.log(data);
-
-    // Procura no array 'data' por correspondências com qualquer palavra-chave
-    const matchingItems = data.filter(item =>
-        keywords.some(keyword =>
-            new RegExp(keyword, 'i').test(item.detail) || // Busca no detalhe
-            new RegExp(keyword, 'i').test(item.category) // Busca na categoria
-        )
-    );
-
-    console.log('Palavras-chave:', keywords);
-    console.log('Itens encontrados:', matchingItems);
-
-    if (matchingItems.length > 0) {
-        // Combina os detalhes das correspondências em uma string
-        const combinedDetails = matchingItems
-            .map(item => `${item.category}: ${item.detail}`)
-            .join('\n\n');
-
-        // Chama a OpenAI API para gerar uma resposta natural para os detalhes combinados
-        const response = await callOpenAIAPI(combinedDetails, query);
-        return response;
-    } else {
-        return { answer: 'Informação não encontrada.' };
-    }
+  if (item) {
+    return await callOpenAIAPI(item.detail, query);
+  } else {
+    return { answer: 'Informação não encontrada.' };
+  }
 }
 
 async function callOpenAIAPI(detail, query) {
-       const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ detail, query })
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detail, query })
     });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Request failed: ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    return { answer: responseData.answer };
+    const data = await response.json();
+    return { answer: data.answer };
+  } catch (error) {
+    console.error('Erro na chamada à API:', error);
+    return { answer: 'Erro ao se comunicar com o assistente.' };
+  }
 }
 
- 
-// Função para exibir os resultados na página
-
 function displayResults(results) {
-    const resultsContainer = document.getElementById('results');
-    resultsContainer.innerHTML = '';
- 
-    if (results.answer) {
-        resultsContainer.innerHTML = `<p>${results.answer}</p>`;
-    } else {
-        resultsContainer.innerHTML = '<p>Nenhum resultado encontrado.</p>';
-    }
+  const resultsContainer = document.getElementById('results');
+  resultsContainer.innerHTML = results.answer
+    ? `<p>${results.answer}</p>`
+    : '<p>Nenhum resultado encontrado.</p>';
 }
