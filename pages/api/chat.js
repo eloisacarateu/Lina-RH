@@ -5,7 +5,11 @@ export default async function handler(req, res) {
 
   const { detail, query } = req.body;
 
-  const prompt = `Aqui estão algumas informações:\n${detail}\n\nPergunta: ${query}`;
+  if (!detail || !query) {
+    return res.status(400).json({ error: 'Detalhes ou consulta ausentes' });
+  }
+
+  const prompt = `Aqui estão algumas informações detalhadas sobre nossa empresa:\n${detail}\n\nCom base nessas informações, responda à seguinte pergunta de forma clara e objetiva: ${query}`;
 
   try {
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -20,17 +24,25 @@ export default async function handler(req, res) {
           { role: 'system', content: 'Você é um assistente útil.' },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 200,
+        max_tokens: 300,  // Ajuste conforme necessário
         temperature: 0.7,
       }),
     });
 
     const data = await openaiRes.json();
 
-    if (data.error) throw new Error(data.error.message);
-    res.status(200).json({ answer: data.choices[0].message.content.trim() });
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      res.status(200).json({ answer: data.choices[0].message.content.trim() });
+    } else {
+      res.status(500).json({ error: 'Erro ao processar a resposta da OpenAI' });
+    }
 
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao consultar a OpenAI' });
+    console.error('Erro ao chamar a OpenAI:', error); // Log para depuração
+    res.status(500).json({ error: 'Erro ao consultar a OpenAI, tente novamente mais tarde.' });
   }
 }
